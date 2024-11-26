@@ -13,3 +13,18 @@ if cleaned == cleaned[::-1]:
     print('Да, это палиндром')
 else:
     print('Нет, это не палиндром')
+
+def is_polyndorm(cleaned_s):
+    '''Проверка чисто по флагам'''
+    left = 0
+    right = len(cleaned) - 1
+    output = True
+    while left < right:
+        if cleaned_s[left] != cleaned_s[right]:
+            output = False
+            break
+        left += 1
+        right -= 1
+    return output
+
+print(f'Через флаги проверка: {is_polyndorm(cleaned)}')
