@@ -26,6 +26,7 @@ def encode(s, shift):
     result = []
     for char in s:
         if char in lower_alphabet:  # Для строчных букв
+            #  нужно сдвинуть буквы в алфавите (от 0 до 25).
             new_char = lower_alphabet[(lower_alphabet.index(char) + shift) % 26]
         elif char in upper_alphabet:  # Для заглавных букв
             new_char = upper_alphabet[(upper_alphabet.index(char) + shift) % 26]
