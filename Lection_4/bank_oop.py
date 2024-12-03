@@ -103,6 +103,15 @@ class Bank:
 
         raise MissingBillsError(bill_id)  # Если не нашли счёт, выбрасываем ошибку
 
+    def transfer(self, sender_account: UUID, recipient_account: UUID, amount: float):
+        """Переводим средства с одного счета на другой."""
+
+        sender_bill = self.find_bill_by_id(sender_account)  # Находим счёт отправителя
+        recipient_bill = self.find_bill_by_id(recipient_account)  # Находим счёт получателя
+
+        sender_bill.spisanie(amount)  # Списываем сумму со счёта отправителя
+        recipient_bill.deposit(amount)  # Зачисляем сумму на счёт получателя
+
 
 
 
