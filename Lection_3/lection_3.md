@@ -261,7 +261,8 @@ def unstable_task():
         raise ValueError('Fail')
 ```
 
-Порядок применения и выполнения декораторов
+
+Несколько декораторов
 ```python
 from functools import lru_cache, wraps
 from urllib.request import urlopen
@@ -276,7 +277,7 @@ def pause(seconds):
         return wrapper
     return decorator
 
-@lru_cache
+@lru_cache # кеш работы
 @pause(5)
 def get_page(url):
     return urlopen(url).read()
