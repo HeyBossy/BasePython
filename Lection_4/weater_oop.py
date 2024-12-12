@@ -183,14 +183,40 @@ class WeatherApi(WeatherProvider):
             pressure=round(current['pressure_mb'] * 0.75),
             humidity=current['humidity'],
         )
+class WeatherProviderFactory:
+    types: dict[str, type[WeatherProvider]] = {
+        'OpenWeatherMap': OpenWeatherMap,
+        'WeatherAPI': WeatherApi,
+    }
+    @classmethod
+    def add_type(cls, name: str, klass: type[WeatherProvider]) -> None:
+        '''Нечего хранить поэтому используем статику (classmethod)'''
+        if not name:
+            raise WeatherError('Type must have a name. ')
+        if not issubclass(klass, WeatherProvider):
+            raise WeatherError(f'Class {klass} is not WeatherProvider ')
+
+    @classmethod
+    def create(cls, name: str, *args, **kwargs) -> WeatherProvider:
+        klass = cls.types.get(name)
+
+        if klass is None:
+            raise WeatherError(f'Weather provider with name {name} is not found ')
+        return klass(*args, **kwargs)
 
 
-# Использование
-service1 = OpenWeatherMap('1f5ca819fa6005b26a222541d0d94e49')
-service2 = WeatherApi('ba5f017d63fd4cc5ad6150956240912')
-weather1 = service1.get_weather('Санкт-Петербург')
-weather2 = service2.get_weather('Санкт-Петербург')
-print(f' Получаем погоду через OpenWeatherMap: {weather1}\n') # Получаем погоду через OpenWeatherMap: WeatherInfo(temperature=-1.08, feels_like=-5.61, description='пасмурно', wind=4, wind_deg=320, pressure=776, humidity=88)
+if __name__ == "__main__":
+    # Использование
+    service1 = OpenWeatherMap('1f5ca819fa6005b26a222541d0d94e49')
+    service2 = WeatherApi('ba5f017d63fd4cc5ad6150956240912')
+    weather1 = service1.get_weather('Санкт-Петербург')
+    weather2 = service2.get_weather('Санкт-Петербург')
+    print(f' Получаем погоду через OpenWeatherMap: {weather1}\n') # Получаем погоду через OpenWeatherMap: WeatherInfo(temperature=-1.08, feels_like=-5.61, description='пасмурно', wind=4, wind_deg=320, pressure=776, humidity=88)
 
-print(f' Получаем погоду через WeatherApi: {weather2}') # Получаем погоду через WeatherApi: WeatherInfo(temperature=-0.6, feels_like=-2.5, description='Пасмурно', wind=1.5, wind_deg=288, pressure=776, humidity=86)
+    print(f' Получаем погоду через WeatherApi: {weather2} \n') # Получаем погоду через WeatherApi: WeatherInfo(temperature=-0.6, feels_like=-2.5, description='Пасмурно', wind=1.5, wind_deg=288, pressure=776, humidity=86)
+
+    service3 = WeatherProviderFactory.create('WeatherAPI', 'ba5f017d63fd4cc5ad6150956240912')
+    weather3 = service3.get_weather('Санкт-Петербург')
+    print(
+        f' Получаем погоду через WeatherApi с помощью WeatherProviderFactory: {service3} \n')  # Получаем погоду через WeatherApi: WeatherInfo(temperature=-0.6, feels_like=-2.5, description='Пасмурно', wind=1.5, wind_deg=288, pressure=776, humidity=86)
 
