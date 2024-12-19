@@ -1,6 +1,9 @@
 # python -m venv env - создать виртуальное окружение
 
 # .\env\Scripts\activate - Активирует виртуальное окружение `env` (работает на Windows).
+# source env/bin/activate - убунту актвиация
+
+# deactivate -  выключить
 
 # pip install "fastapi[standard]"
 
