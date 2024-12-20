@@ -9,6 +9,8 @@
 # pip install "fastapi[standard]" - установить фастапи (всегда с  venv)
 
 # fastapi dev main.py - запустить сервак (dev -  в режиме разработки запускать)
+#или  uvicorn  main:app
+
 
 # http://127.0.0.1:8000/docs - документация нашего фастапи там видны методы!
 from __future__ import annotations
