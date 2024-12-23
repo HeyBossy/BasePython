@@ -1,76 +1,61 @@
-# python -m venv env - создать виртуальное окружение
+# Импортируем необходимые модули и классы
+from __future__ import annotations  # Позволяет использовать аннотации типов, которые будут оценены позже
+from contextlib import asynccontextmanager  # Асинхронный контекстный менеджер для управления ресурсами
+import typing as t  # Импортируем модуль typing для работы с типами
+
+from fastapi import FastAPI, HTTPException, Depends  # Импортируем FastAPI и исключения
+from pydantic import BaseModel, Field  # Импортируем базовый класс для моделей и поле для валидации
+import sqlalchemy as sa  # Импортируем SQLAlchemy для работы с базами данных
+from sqlalchemy.ext.asyncio import (create_async_engine,
+    async_sessionmaker, AsyncSession)
+# Импортируем асинхронные функции SQLAlchemy
+from doska_obyavleni import Base, Category  # Импортируем базовый класс и модель Category из модуля doska_obyavleni
+
+# Создаем асинхронный движок для работы с SQLite
+engine = create_async_engine('sqlite+aiosqlite:///./ad-board.sqlite')  # Указываем URL базы данных SQLite
+async_session = async_sessionmaker(bind=engine, expire_on_commit=False)  # Создаем асинхронный сессионный менеджер
+
+async def get_session():
+    async with async_session() as session:
+        yield session
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Асинхронный контекстный менеджер для создания всех таблиц в базе данных"""
+    async with engine.begin() as conn:  # Начинаем асинхронную транзакцию
+        await conn.run_sync(Base.metadata.create_all)  # Создаем все таблицы из метаданных
+    yield  # Возвращаем управление после создания таблиц
+    await engine.dispose()  # Освобождаем ресурсы при завершении работы приложения
 
 
-# .\env\Scripts\activate - Активирует виртуальное окружение `env` (работает на Windows).
-# source env/bin/activate - убунту актвиация
-
-# deactivate -  выключить
-
-# pip install "fastapi[standard]" - установить фастапи (всегда с  venv)
-
-# fastapi dev main.py - запустить сервак (dev -  в режиме разработки запускать)
-#или  uvicorn  main:app
+# Создаем экземпляр приложения FastAPI с заданным контекстом жизни
+app = FastAPI(lifespan=lifespan)  # Инициализация приложения
 
 
-# http://127.0.0.1:8000/docs - документация нашего фастапи там видны методы!
-from __future__ import annotations
-import typing as t
-
-from fastapi import FastAPI, HTTPException
-from pydantic import \
-    BaseModel  # типо dataclass для описания данных но круче может автоматом вызывать ошибки если тип данных не верный + с фастапи работает
-
-app = FastAPI()  # наше приложение
-
-
-class Note(BaseModel):
-    # Определяем модель данных `Note`:
-    # - `id`: уникальный идентификатор заметки (целое число).
-    # - `text`: текст заметки (строка).
-    # Pydantic автоматически проверяет и валидирует входные данные, соответствующие этим полям.
-    id: int
-    text: str
+@app.get('/categories')
+async def read_all_categories(
+        session: AsyncSession = Depends(get_session())):
+    """Прочитать данные из БД и вернуть список категорий"""
+    # нужна сессия чтоы прочитать данные
+    stmt = sa.select(Category)  # Формируем SQL-запрос для выбора всех категорий
+    result = await session.scalars(stmt)  # Выполняем запрос и получаем скаляры (значения)
+    return result.all()  # Возвращаем все результаты
 
 
-def generate_fake_data(n):
-    '''  Возвращаем пару `(id, note - заметка)`.'''
-    for i in range(1, n + 1):  # Создаём диапазон от 1 до n включительно.
-        note = Note(id=i, text=f'Note #{i}')
-        # Создаём объект `Note` с уникальным `id` и текстом `Note #i`.
-        yield note.id, note
+class CategoryIn(BaseModel):
+    """Модель для входных данных категории"""
+    title: str = Field(min_length=1, max_length=100)  # Поле title с минимальной и максимальной длиной
 
 
-fake_db_data = dict(generate_fake_data(5))  # Генерируем фейковую базу данных на 5 записей
-# и преобразуем данные из генератора в словарь,
-# где ключ — это `id`, а значение — текст с `Note
-
-# точка - endpoint  в фастапи(функция)
-@app.get('/')  # Маршрут для HTTP GET-запроса по адресу `/`.
-def read_all_notes() -> t.List[Note]:
-    '''Функция возвращает список всех заметок из базы данных.'''
-    return list(fake_db_data.values())  # Извлекаем все значения (объекты `Note`) из словаря и преобразуем их в список.
+class CategoryOut(CategoryIn):
+    """Модель для выходных данных категории (с ID)"""
+    id: int  # Поле id для идентификации категории
 
 
-# Когда вы сделаете запрос к URL, например http://127.0.0.1:8000/5,
-# значение 5 будет передано в функцию read_note как аргумент
-# note_id.
-@app.get('/{note_id}')  # Маршрут для HTTP GET-запроса с параметром `note_id`, например `/3`.
-def read_note(note_id: int) -> Note:
-    # Функция принимает параметр `note_id` (идентификатор заметки) и возвращает соответствующую заметку.
-    '''
-    curl 127.0.0.1:8000/3 - Вернёт заметку с id=3.
-    Если указать, например, 10, и такой заметки нет (до 5 создавали), будет ошибка 404.
-    '''
-    if note_id not in fake_db_data:
-        # Если `note_id` нет в базе данных:
-        raise HTTPException(404,
-                            f'Note with id {note_id} not found')  # Возбуждаем исключение HTTP 404 (Not Found) с сообщением об ошибке.
-    return fake_db_data[note_id]  # Если заметка найдена, возвращаем её.
-
-
-#передать данные на сервер
-@app.post('/')
-def create_note(payload: Note) -> Note: # данные тело запроса (объект джсон)
-    fake_db_data[payload.id] = payload
-    return payload
-
+@app.post('/categories', response_model=CategoryOut, status_code=201)
+async def create_category(payload: CategoryIn) -> Category:
+    """Создание новой категории"""
+    category = Category(title=payload.title)  # Создаем новый объект категории на основе входных данных
+    async with async_session() as session:  # Открываем асинхронную сессию
+        session.add(category)  # Добавляем новую категорию в сессию
+        await session.commit()  # Сохраняем изменения в базе данных
+    return category  # Возвращаем созданную категорию

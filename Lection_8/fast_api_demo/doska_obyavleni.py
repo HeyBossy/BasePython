@@ -6,7 +6,7 @@ from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy.orm import (relationship,
                             DeclarativeBase, Mapped, mapped_column)
-
+import typing as t
 
 # базовый класс
 class Base(DeclarativeBase):
@@ -21,7 +21,7 @@ class Category(Base):
     title: Mapped[str] = mapped_column(sa.String(100))
 
     # sql  двусторонние связи таблицами: Mapped[БД связанная] = relationship[обратная категория=колонка связанная]
-    ads: Mapped[list[Ad]] = relationship(
+    ads: Mapped[t.List[Ad]] = relationship(
         back_populates='category'
     ) # у объявления одна категория, а у категории список объявлений хранится
 
@@ -60,6 +60,6 @@ class User(Base):
                                               default='')
     password: Mapped[str] = mapped_column(sa.String(100))
     # sql Alchemy relationship - двустороняя связь с таблицами
-    ads: Mapped[list[Ad]] = relationship(
+    ads: Mapped[t.List[Ad]] = relationship(
         back_populates='user'
     )
